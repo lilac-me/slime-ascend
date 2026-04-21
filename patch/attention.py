@@ -64,6 +64,9 @@ import copy
 import torch
 from torch import Tensor
 
+from megatron.core.tensor_parallel import _gather_along_last_dim, _reduce_scatter_along_last_dim
+from megatron.core.parallel_state import get_tensor_model_parallel_group_if_none, get_tensor_model_parallel_rank()
+
 
 # SelfAttention class:
 def get_query_key_value_tensors(
@@ -150,3 +153,29 @@ def get_query_key_value_tensors(
         query = query[:, :, idx * size : (idx + 1) * size, :]
         
     return query, key, value
+
+
+def all_gather_last_dim_from_tensor_parallel_region(input_, group=None):
+    """Wrapper for autograd function: forward: AG, backward RS <last dim>"""
+    group = get_tensor_model_parallel_group_if_none(group)
+    return _AllGatherFromTensorParallelRegion.apply(input_, group)
+
+
+class _AllGatherFromTensorParallelRegion(torch.autograd.Function):
+    """Gather the input from model parallel region and concatenate."""
+
+    @staticmethod
+    def symbolic(graph, input_, group):
+        """Symbolic function for tracing."""
+        return _gather_along_last_dim(input_, group)
+
+    @staticmethod
+    def forward(ctx, input_, group):
+        """Forward function."""
+        ctx.group = group
+        return _gather_along_last_dim(input_, group)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        """Backward function."""
+        return _reduce_scatter_along_last_dim(grad_output, ctx.group), None
