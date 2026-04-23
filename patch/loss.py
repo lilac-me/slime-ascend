@@ -2,6 +2,27 @@ import torch
 from argparse import Namespace
 
 
+# megatron_actor
+# store_prefix = "ref_"
+# def compute_log_prob(
+#     self,
+#     data_iterator: list[DataIterator],
+#     num_microbatches: list[int],
+#     store_prefix: str = "",
+# ) -> dict[str, list[torch.Tensor]]:
+
+#     with timer(f"{store_prefix}log_probs"):
+#         return forward_only(
+#             get_log_probs_and_entropy,
+#             self.args,
+#             self.model,
+#             data_iterator,
+#             num_microbatches,
+#             store_prefix=store_prefix,
+#         )
+# megatron forward_backward_func call -> forward_step call -> get_log_probs_and_entropy
+
+
 def get_log_probs_and_entropy(
     logits: torch.Tensor,
     *,
